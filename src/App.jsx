@@ -22,7 +22,7 @@ export function App() {
   // Persistent Settings
   const [activeCityIds, setActiveCityIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('chronoglobe_cities');
+      const saved = localStorage.getItem('doraclock_cities') || localStorage.getItem('chronoglobe_cities');
       return saved ? JSON.parse(saved) : DEFAULT_USER_CITIES;
     } catch {
       return DEFAULT_USER_CITIES;
@@ -31,7 +31,7 @@ export function App() {
 
   const [is24Hour, setIs24Hour] = useState(() => {
     try {
-      const saved = localStorage.getItem('chronoglobe_24h');
+      const saved = localStorage.getItem('doraclock_24h') || localStorage.getItem('chronoglobe_24h');
       return saved ? JSON.parse(saved) : false;
     } catch {
       return false;
@@ -40,7 +40,7 @@ export function App() {
 
   const [theme, setTheme] = useState(() => {
     try {
-      const saved = localStorage.getItem('chronoglobe_theme');
+      const saved = localStorage.getItem('doraclock_theme') || localStorage.getItem('chronoglobe_theme');
       return saved || 'dark';
     } catch {
       return 'dark';
@@ -49,7 +49,7 @@ export function App() {
 
   const [showAnalog, setShowAnalog] = useState(() => {
     try {
-      const saved = localStorage.getItem('chronoglobe_analog');
+      const saved = localStorage.getItem('doraclock_analog') || localStorage.getItem('chronoglobe_analog');
       return saved ? JSON.parse(saved) : true;
     } catch {
       return true;
@@ -63,20 +63,20 @@ export function App() {
 
   // Sync to LocalStorage
   useEffect(() => {
-    localStorage.setItem('chronoglobe_cities', JSON.stringify(activeCityIds));
+    localStorage.setItem('doraclock_cities', JSON.stringify(activeCityIds));
   }, [activeCityIds]);
 
   useEffect(() => {
-    localStorage.setItem('chronoglobe_24h', JSON.stringify(is24Hour));
+    localStorage.setItem('doraclock_24h', JSON.stringify(is24Hour));
   }, [is24Hour]);
 
   useEffect(() => {
-    localStorage.setItem('chronoglobe_theme', theme);
+    localStorage.setItem('doraclock_theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   useEffect(() => {
-    localStorage.setItem('chronoglobe_analog', JSON.stringify(showAnalog));
+    localStorage.setItem('doraclock_analog', JSON.stringify(showAnalog));
   }, [showAnalog]);
 
   // City Handlers
