@@ -3,6 +3,40 @@
 export const IST_TIMEZONE = 'Asia/Kolkata';
 
 /**
+ * Gets formatted timezone info with abbreviation and offset string (e.g. "EDT • UTC-04:00")
+ */
+export function getFormattedTzDetails(date = new Date(), timezone = IST_TIMEZONE) {
+  try {
+    const partsShort = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short'
+    }).formatToParts(date);
+    
+    const partsLongOffset = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'shortOffset'
+    }).formatToParts(date);
+
+    const tzAbbr = partsShort.find(p => p.type === 'timeZoneName')?.value || '';
+    const utcOffset = partsLongOffset.find(p => p.type === 'timeZoneName')?.value || '';
+
+    return {
+      tzAbbr,
+      utcOffset,
+      badgeText: tzAbbr === utcOffset ? tzAbbr : `${tzAbbr} (${utcOffset})`,
+      fullIdentifier: timezone
+    };
+  } catch {
+    return {
+      tzAbbr: '',
+      utcOffset: '',
+      badgeText: timezone,
+      fullIdentifier: timezone
+    };
+  }
+}
+
+/**
  * Gets a formatted object representing current or custom time in a target timezone.
  * @param {Date} date
  * @param {string} timezone - IANA timezone e.g. 'America/New_York'
@@ -59,22 +93,17 @@ export function getTimeInfo(date, timezone = IST_TIMEZONE, is24Hour = false) {
       day: 'numeric'
     }).format(date);
 
-    // Timezone Abbreviation or Offset name (e.g. "EDT", "GMT+5:30")
-    const tzName = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      timeZoneName: 'short'
-    }).formatToParts(date).find(p => p.type === 'timeZoneName')?.value || '';
+    // Timezone details
+    const tzDetails = getFormattedTzDetails(date, timezone);
 
     // Day/Night Phase
-    // Dawn: 5-7, Day: 7-17, Sunset/Golden: 17-20, Night: 20-5
     let phase = 'night';
     if (hour24 >= 5 && hour24 < 8) phase = 'dawn';
     else if (hour24 >= 8 && hour24 < 17) phase = 'day';
     else if (hour24 >= 17 && hour24 < 20) phase = 'dusk';
     else phase = 'night';
 
-    // Business tier: 
-    // work: 9-18, awake/leisure: 7-9 & 18-22, sleep: 22-7
+    // Business tier
     let businessStatus = 'sleep';
     if (hour24 >= 9 && hour24 < 18) businessStatus = 'work';
     else if ((hour24 >= 7 && hour24 < 9) || (hour24 >= 18 && hour24 < 22)) businessStatus = 'leisure';
@@ -92,7 +121,10 @@ export function getTimeInfo(date, timezone = IST_TIMEZONE, is24Hour = false) {
       secondNum: parseInt(second, 10),
       dateStr,
       fullDateStr,
-      tzName,
+      tzName: tzDetails.tzAbbr,
+      utcOffset: tzDetails.utcOffset,
+      tzBadge: tzDetails.badgeText,
+      timezone,
       phase,
       businessStatus
     };
@@ -111,6 +143,9 @@ export function getTimeInfo(date, timezone = IST_TIMEZONE, is24Hour = false) {
       dateStr: '',
       fullDateStr: '',
       tzName: '',
+      utcOffset: '',
+      tzBadge: '',
+      timezone,
       phase: 'night',
       businessStatus: 'sleep'
     };
@@ -119,13 +154,11 @@ export function getTimeInfo(date, timezone = IST_TIMEZONE, is24Hour = false) {
 
 /**
  * Calculates the exact minute offset between a target timezone and IST.
- * Returns minutes difference (e.g. -570 for New York = -9h 30m).
  */
 export function getMinutesOffsetFromIST(date, targetTimezone) {
   if (targetTimezone === IST_TIMEZONE) return 0;
   
   try {
-    // Get target ISO timestamp representation
     const targetFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone: targetTimezone,
       year: 'numeric',
@@ -173,7 +206,6 @@ export function getMinutesOffsetFromIST(date, targetTimezone) {
 
 /**
  * Formats difference relative to IST into human-readable label.
- * e.g. "-9h 30m (Yesterday)" or "+3h 30m (Today)" or "Same as IST"
  */
 export function formatOffsetLabel(minutesDiff, date, targetTz) {
   if (minutesDiff === 0) return 'Same as IST';
@@ -185,13 +217,11 @@ export function formatOffsetLabel(minutesDiff, date, targetTz) {
 
   const diffStr = mins > 0 ? `${sign}${hours}h ${mins}m` : `${sign}${hours}h`;
 
-  // Check day relative to IST
   const istDay = new Intl.DateTimeFormat('en-US', { timeZone: IST_TIMEZONE, day: 'numeric' }).format(date);
   const targetDay = new Intl.DateTimeFormat('en-US', { timeZone: targetTz, day: 'numeric' }).format(date);
 
   let relativeDay = '';
   if (istDay !== targetDay) {
-    // Determine if ahead (Tomorrow) or behind (Yesterday)
     relativeDay = minutesDiff > 0 ? ' • Tomorrow' : ' • Yesterday';
   }
 
@@ -202,12 +232,10 @@ export function formatOffsetLabel(minutesDiff, date, targetTz) {
  * Converts given hours & minutes from IST of a given base date into target timezone Date.
  */
 export function convertISTtoTarget(istHours, istMinutes, baseDate = new Date(), targetTz = IST_TIMEZONE, is24Hour = false) {
-  // Create a synthetic date in UTC that matches IST (UTC+5:30)
   const year = baseDate.getFullYear();
   const month = baseDate.getMonth();
   const day = baseDate.getDate();
 
-  // IST is UTC + 5h 30m => UTC = IST - 5h 30m
   const istDateMs = Date.UTC(year, month, day, istHours, istMinutes, 0);
   const utcDateMs = istDateMs - (5.5 * 60 * 60 * 1000);
   const targetDate = new Date(utcDateMs);
@@ -219,11 +247,9 @@ export function convertISTtoTarget(istHours, istMinutes, baseDate = new Date(), 
  * Converts given hours & minutes from a Target timezone of base date into IST representation.
  */
 export function convertTargetToIST(targetHours, targetMinutes, baseDate = new Date(), fromTz = IST_TIMEZONE, is24Hour = false) {
-  // Compute the offset of fromTz relative to UTC on this date
   const testDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 12, 0, 0);
   const offsetFromIst = getMinutesOffsetFromIST(testDate, fromTz);
 
-  // IST = Target - offsetFromIst
   const totalTargetMinutes = targetHours * 60 + targetMinutes;
   let istMinutesTotal = totalTargetMinutes - offsetFromIst;
 

@@ -29,6 +29,15 @@ export function App() {
     }
   });
 
+  const [pinnedCityIds, setPinnedCityIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('doraclock_pinned');
+      return saved ? JSON.parse(saved) : ['india'];
+    } catch {
+      return ['india'];
+    }
+  });
+
   const [is24Hour, setIs24Hour] = useState(() => {
     try {
       const saved = localStorage.getItem('doraclock_24h') || localStorage.getItem('chronoglobe_24h');
@@ -67,6 +76,10 @@ export function App() {
   }, [activeCityIds]);
 
   useEffect(() => {
+    localStorage.setItem('doraclock_pinned', JSON.stringify(pinnedCityIds));
+  }, [pinnedCityIds]);
+
+  useEffect(() => {
     localStorage.setItem('doraclock_24h', JSON.stringify(is24Hour));
   }, [is24Hour]);
 
@@ -79,10 +92,11 @@ export function App() {
     localStorage.setItem('doraclock_analog', JSON.stringify(showAnalog));
   }, [showAnalog]);
 
-  // City Handlers
+  // Country Handlers
   const handleToggleCity = (cityId) => {
     if (activeCityIds.includes(cityId)) {
       setActiveCityIds(prev => prev.filter(id => id !== cityId));
+      setPinnedCityIds(prev => prev.filter(id => id !== cityId));
     } else {
       setActiveCityIds(prev => [...prev, cityId]);
     }
@@ -90,6 +104,60 @@ export function App() {
 
   const handleRemoveCity = (cityId) => {
     setActiveCityIds(prev => prev.filter(id => id !== cityId));
+    setPinnedCityIds(prev => prev.filter(id => id !== cityId));
+  };
+
+  const handleTogglePinCity = (cityId) => {
+    if (pinnedCityIds.includes(cityId)) {
+      setPinnedCityIds(prev => prev.filter(id => id !== cityId));
+    } else {
+      setPinnedCityIds(prev => [cityId, ...prev]);
+    }
+  };
+
+  const handleMoveUp = (cityId) => {
+    setActiveCityIds(prev => {
+      const idx = prev.indexOf(cityId);
+      if (idx <= 0) return prev;
+      const copy = [...prev];
+      const temp = copy[idx - 1];
+      copy[idx - 1] = copy[idx];
+      copy[idx] = temp;
+      return copy;
+    });
+  };
+
+  const handleMoveDown = (cityId) => {
+    setActiveCityIds(prev => {
+      const idx = prev.indexOf(cityId);
+      if (idx < 0 || idx >= prev.length - 1) return prev;
+      const copy = [...prev];
+      const temp = copy[idx + 1];
+      copy[idx + 1] = copy[idx];
+      copy[idx] = temp;
+      return copy;
+    });
+  };
+
+  const handleReorder = (sourceCityId, targetCityId) => {
+    if (!sourceCityId || !targetCityId || sourceCityId === targetCityId) return;
+    setActiveCityIds(prev => {
+      const displayed = [...prev].sort((a, b) => {
+        const isAPinned = pinnedCityIds.includes(a);
+        const isBPinned = pinnedCityIds.includes(b);
+        if (isAPinned && !isBPinned) return -1;
+        if (!isAPinned && isBPinned) return 1;
+        return 0;
+      });
+
+      const sIdx = displayed.indexOf(sourceCityId);
+      const tIdx = displayed.indexOf(targetCityId);
+      if (sIdx === -1 || tIdx === -1) return prev;
+
+      displayed.splice(sIdx, 1);
+      displayed.splice(tIdx, 0, sourceCityId);
+      return displayed;
+    });
   };
 
   const handleConvertWithCity = (city) => {
@@ -117,10 +185,15 @@ export function App() {
         {activeTab === 'clocks' && (
           <WorldClockList
             activeCityIds={activeCityIds}
+            pinnedCityIds={pinnedCityIds}
             currentTime={currentTime}
             is24Hour={is24Hour}
             showAnalog={showAnalog}
             setShowAnalog={setShowAnalog}
+            onTogglePin={handleTogglePinCity}
+            onMoveUp={handleMoveUp}
+            onMoveDown={handleMoveDown}
+            onReorder={handleReorder}
             onOpenAddModal={() => setIsAddModalOpen(true)}
             onRemoveCity={handleRemoveCity}
             onConvertWithCity={handleConvertWithCity}
@@ -151,14 +224,14 @@ export function App() {
         <button
           className="mobile-fab"
           onClick={() => setIsAddModalOpen(true)}
-          title="Add City"
+          title="Add Country"
           id="mobile-add-fab"
         >
           <Plus size={26} />
         </button>
       )}
 
-      {/* Search & Add City Modal */}
+      {/* Search & Add Country Modal */}
       <AddCityModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

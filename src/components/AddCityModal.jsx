@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Plus, Check, Globe } from 'lucide-react';
 import { CITIES_DATA, CONTINENTS } from '../data/cities';
+import { getFormattedTzDetails } from '../utils/timeUtils';
 
 export function AddCityModal({ 
   isOpen, 
@@ -13,10 +14,12 @@ export function AddCityModal({
 
   const filteredCities = useMemo(() => {
     return CITIES_DATA.filter(c => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch = 
-        c.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.timezone.toLowerCase().includes(searchQuery.toLowerCase());
+        c.country.toLowerCase().includes(q) ||
+        c.displayName.toLowerCase().includes(q) ||
+        (c.region && c.region.toLowerCase().includes(q)) ||
+        c.timezone.toLowerCase().includes(q);
 
       if (!matchesSearch) return false;
 
@@ -34,7 +37,7 @@ export function AddCityModal({
         <div className="modal-header">
           <h2 className="modal-title">
             <Globe size={20} color="#6366f1" />
-            <span>Add World City</span>
+            <span>Add Country Clock</span>
           </h2>
           <button className="close-btn" onClick={onClose} id="modal-close-btn">
             <X size={18} />
@@ -46,11 +49,11 @@ export function AddCityModal({
           <input
             type="text"
             className="search-input"
-            placeholder="Search city, country, or timezone..."
+            placeholder="Search country or timezone (e.g. US, Japan, GMT, EST)..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             autoFocus
-            id="city-search-input"
+            id="country-search-input"
           />
         </div>
 
@@ -69,30 +72,35 @@ export function AddCityModal({
         <div className="modal-city-list">
           {filteredCities.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
-              <p>No cities found matching "{searchQuery}"</p>
+              <p>No countries found matching "{searchQuery}"</p>
             </div>
           ) : (
             filteredCities.map(city => {
               const isAdded = activeCityIds.includes(city.id);
+              const tzInfo = getFormattedTzDetails(new Date(), city.timezone);
+
               return (
                 <div 
                   key={city.id} 
                   className={`modal-city-item ${isAdded ? 'already-added' : ''}`}
                   onClick={() => onToggleCity(city.id)}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{city.flag}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.6rem' }}>{city.flag}</span>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{city.city}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {city.country} • {city.timezone}
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem' }}>{city.displayName}</div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <span>{city.timezone}</span>
+                        <span style={{ color: 'var(--accent-blue)', fontWeight: 700, background: 'var(--bg-glass)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                          {tzInfo.badgeText}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <button 
                     className={`toggle-pill-btn ${isAdded ? 'active' : ''}`}
-                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
                   >
                     {isAdded ? (
                       <>

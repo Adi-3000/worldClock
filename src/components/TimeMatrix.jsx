@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { LayoutGrid, Briefcase, Coffee, BedDouble } from 'lucide-react';
 import { CITIES_DATA } from '../data/cities';
-import { generate24HourSlots, IST_TIMEZONE } from '../utils/timeUtils';
+import { generate24HourSlots } from '../utils/timeUtils';
 
 export function TimeMatrix({ activeCityIds, currentTime, is24Hour, onSelectHour }) {
   const targetCities = useMemo(() => {
@@ -23,7 +23,7 @@ export function TimeMatrix({ activeCityIds, currentTime, is24Hour, onSelectHour 
       <div className="section-header">
         <div className="section-title">
           <LayoutGrid size={20} color="#a855f7" />
-          <span>24-Hour Overlap Matrix</span>
+          <span>24-Hour Country Overlap Matrix</span>
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', fontSize: '0.72rem' }}>
           <span className="business-tag business-work"><Briefcase size={10} /> 9-18h</span>
@@ -36,11 +36,11 @@ export function TimeMatrix({ activeCityIds, currentTime, is24Hour, onSelectHour 
         {targetCities.map(city => (
           <div key={city.id} className="matrix-row">
             <div className="matrix-city-col">
-              <span style={{ fontSize: '1.2rem' }}>{city.flag}</span>
+              <span style={{ fontSize: '1.3rem' }}>{city.flag}</span>
               <div>
-                <div style={{ lineHeight: 1.1 }}>{city.city}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                  {city.timezone.split('/')[1]?.replace('_', ' ')}
+                <div style={{ lineHeight: 1.15, fontWeight: 700 }}>{city.displayName}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
+                  {city.continent}
                 </div>
               </div>
             </div>
@@ -56,7 +56,7 @@ export function TimeMatrix({ activeCityIds, currentTime, is24Hour, onSelectHour 
                   <div
                     key={slot.istHour}
                     className={`matrix-slot ${timeInfo.businessStatus}`}
-                    title={`${city.city}: ${timeInfo.timeString} (${timeInfo.businessStatus}) | IST: ${slot.istHour}:00`}
+                    title={`${city.displayName}: ${timeInfo.timeString} (${timeInfo.businessStatus}) | IST: ${slot.istHour}:00`}
                     onClick={() => onSelectHour && onSelectHour(slot.istHour)}
                   >
                     <span>{hourFormatted}</span>

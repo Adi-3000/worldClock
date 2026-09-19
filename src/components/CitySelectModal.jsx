@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, Globe, Check, MapPin } from 'lucide-react';
 import { CITIES_DATA, CONTINENTS } from '../data/cities';
-import { getTimeInfo, getMinutesOffsetFromIST, formatOffsetLabel, IST_TIMEZONE } from '../utils/timeUtils';
+import { getTimeInfo, getMinutesOffsetFromIST, formatOffsetLabel, getFormattedTzDetails } from '../utils/timeUtils';
 
 export function CitySelectModal({
   isOpen,
@@ -9,18 +9,19 @@ export function CitySelectModal({
   selectedCityId,
   onSelectCity,
   currentTime,
-  title = "Select Target City to Convert"
+  title = "Select Target Country to Convert"
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContinent, setSelectedContinent] = useState('All');
 
   const filteredCities = useMemo(() => {
     return CITIES_DATA.filter(c => {
-      // Don't show India/IST in target list if unwanted, but allow everything else
+      const q = searchQuery.toLowerCase();
       const matchesSearch = 
-        c.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.timezone.toLowerCase().includes(searchQuery.toLowerCase());
+        c.country.toLowerCase().includes(q) ||
+        c.displayName.toLowerCase().includes(q) ||
+        (c.region && c.region.toLowerCase().includes(q)) ||
+        c.timezone.toLowerCase().includes(q);
 
       if (!matchesSearch) return false;
       if (selectedContinent === 'All') return true;
@@ -39,7 +40,7 @@ export function CitySelectModal({
             <Globe size={20} color="#38bdf8" />
             <span>{title}</span>
           </h2>
-          <button className="close-btn" onClick={onClose} id="city-select-modal-close-btn">
+          <button className="close-btn" onClick={onClose} id="country-select-modal-close-btn">
             <X size={18} />
           </button>
         </div>
@@ -50,11 +51,11 @@ export function CitySelectModal({
           <input
             type="text"
             className="search-input"
-            placeholder="Type any city (e.g. Seattle, Zurich, Tokyo, Cairo)..."
+            placeholder="Type any country or timezone (e.g. US, Japan, GMT, EST)..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             autoFocus
-            id="target-city-search-input"
+            id="target-country-search-input"
           />
         </div>
 
@@ -71,12 +72,12 @@ export function CitySelectModal({
           ))}
         </div>
 
-        {/* City Results List */}
+        {/* Country Results List */}
         <div className="modal-city-list">
           {filteredCities.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-tertiary)' }}>
-              <p style={{ fontSize: '1rem', marginBottom: '0.35rem' }}>No cities found matching "{searchQuery}"</p>
-              <p style={{ fontSize: '0.8rem' }}>Try searching by country name or popular city.</p>
+              <p style={{ fontSize: '1rem', marginBottom: '0.35rem' }}>No countries found matching "{searchQuery}"</p>
+              <p style={{ fontSize: '0.8rem' }}>Try searching by continent or popular tag.</p>
             </div>
           ) : (
             filteredCities.map(city => {
@@ -84,6 +85,7 @@ export function CitySelectModal({
               const timeInfo = getTimeInfo(currentTime, city.timezone, false);
               const offsetMins = getMinutesOffsetFromIST(currentTime, city.timezone);
               const offsetStr = formatOffsetLabel(offsetMins, currentTime, city.timezone);
+              const tzDetails = getFormattedTzDetails(currentTime, city.timezone);
 
               return (
                 <div 
@@ -99,16 +101,19 @@ export function CitySelectModal({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{city.flag}</span>
+                    <span style={{ fontSize: '1.6rem' }}>{city.flag}</span>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>{city.city}</span>
+                      <div style={{ fontWeight: 700, fontSize: '0.98rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>{city.displayName}</span>
                         {isSelected && (
                           <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', background: 'var(--accent-indigo)', borderRadius: 'var(--radius-full)', color: '#fff' }}>Selected</span>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {city.country} • {offsetStr}
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <span>{city.timezone}</span>
+                        <span style={{ color: 'var(--accent-blue)', fontWeight: 700, background: 'var(--bg-glass)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                          {tzDetails.badgeText}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -118,7 +123,7 @@ export function CitySelectModal({
                       {timeInfo.timeString}
                     </div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                      {timeInfo.tzName}
+                      {offsetStr}
                     </div>
                   </div>
                 </div>

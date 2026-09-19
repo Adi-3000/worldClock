@@ -10,7 +10,6 @@ import {
   Coffee, 
   BedDouble,
   Search,
-  MapPin,
   ChevronDown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -35,13 +34,13 @@ export function TimeConverter({
   // Converter direction: 'IST_TO_TARGET' or 'TARGET_TO_IST'
   const [direction, setDirection] = useState('IST_TO_TARGET');
 
-  // Selected Target City
+  // Selected Target Country
   const [selectedTargetCity, setSelectedTargetCity] = useState(() => {
     if (preselectedCity) return preselectedCity;
-    return CITIES_DATA.find(c => c.id === 'new-york-us') || CITIES_DATA[1];
+    return CITIES_DATA.find(c => c.id === 'usa-eastern') || CITIES_DATA[1];
   });
 
-  // Modal for selecting target city
+  // Modal for selecting target country
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
   // Time in minutes (0 to 1439)
@@ -77,7 +76,7 @@ export function TimeConverter({
         istEquivalentMinutes: inputMinutes
       };
     } else {
-      // Input is Target City time -> Convert to IST
+      // Input is Target Country time -> Convert to IST
       const istTime = convertTargetToIST(inputHours, inputMinutes, baseDate, selectedTargetCity.timezone, is24Hour);
       const tgtTime = getTimeInfo(
         new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), inputHours, inputMinutes),
@@ -93,13 +92,13 @@ export function TimeConverter({
     }
   }, [direction, inputHours, inputMinutes, baseDate, selectedTargetCity, is24Hour]);
 
-  // All active cities for multi-city breakdown
+  // All active countries for breakdown
   const targetCitiesList = useMemo(() => {
     const active = activeCityIds
       .map(id => CITIES_DATA.find(c => c.id === id))
       .filter(Boolean);
 
-    // Make sure the selected target city is also present in list
+    // Make sure the selected target country is present in list
     if (!active.some(c => c.id === selectedTargetCity.id)) {
       return [selectedTargetCity, ...active];
     }
@@ -126,12 +125,12 @@ export function TimeConverter({
   const handleCopySchedule = () => {
     let summary = `🗓️ Time Conversion Schedule (${istComputedTime.fullDateStr})\n`;
     summary += `🇮🇳 Indian Standard Time (IST): ${istComputedTime.timeString}\n`;
-    summary += `${selectedTargetCity.flag} ${selectedTargetCity.city} (${selectedTargetCity.country}): ${targetComputedTime.timeString} [${targetComputedTime.tzName}]\n`;
+    summary += `${selectedTargetCity.flag} ${selectedTargetCity.displayName}: ${targetComputedTime.timeString} [${targetComputedTime.tzName}]\n`;
     summary += `------------------------------------\n`;
 
     targetCitiesList.forEach(city => {
       const conv = convertISTtoTarget(istEquivalentHours, istEquivalentMinutes, baseDate, city.timezone, is24Hour);
-      summary += `${city.flag} ${city.city}: ${conv.timeString} (${conv.dateStr})\n`;
+      summary += `${city.flag} ${city.displayName}: ${conv.timeString} (${conv.dateStr})\n`;
     });
 
     navigator.clipboard.writeText(summary).then(() => {
@@ -177,24 +176,23 @@ export function TimeConverter({
         </div>
       )}
 
-      {/* Target City Search & Selection Header Banner */}
+      {/* Target Country Search & Selection Header Banner */}
       <div className="city-search-trigger-card" onClick={() => setIsCityModalOpen(true)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '2rem' }}>{selectedTargetCity.flag}</span>
+          <span style={{ fontSize: '2.2rem' }}>{selectedTargetCity.flag}</span>
           <div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-              Target City To Convert
+              Target Country To Convert
             </div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span>{selectedTargetCity.city}</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 500 }}>({selectedTargetCity.country})</span>
+              <span>{selectedTargetCity.displayName}</span>
             </div>
           </div>
         </div>
 
-        <button className="change-city-pill" id="change-target-city-btn">
+        <button className="change-city-pill" id="change-target-country-btn">
           <Search size={14} />
-          <span>Search Any City</span>
+          <span>Search Any Country</span>
           <ChevronDown size={14} />
         </button>
       </div>
@@ -205,13 +203,16 @@ export function TimeConverter({
           {/* Side 1: IST */}
           <div className="conversion-side">
             <div style={{ fontSize: '0.78rem', color: 'var(--accent-ist)', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              🇮🇳 Indian Standard Time
+              🇮🇳 India (IST)
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.6rem, 5vw, 2.1rem)', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0' }}>
               {istComputedTime.timeString}
             </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
               <span>{istComputedTime.dateStr}</span>
+              <span style={{ color: 'var(--accent-ist)', fontWeight: 700, background: 'var(--bg-glass)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                {istComputedTime.tzBadge}
+              </span>
               {renderBusinessBadge(istComputedTime.businessStatus)}
             </div>
           </div>
@@ -226,24 +227,27 @@ export function TimeConverter({
             <ArrowRightLeft size={18} />
           </button>
 
-          {/* Side 2: Target City */}
+          {/* Side 2: Target Country */}
           <div className="conversion-side" style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              {selectedTargetCity.flag} {selectedTargetCity.city.toUpperCase()}
+              {selectedTargetCity.flag} {selectedTargetCity.displayName.toUpperCase()}
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.6rem, 5vw, 2.1rem)', fontWeight: 800, color: 'var(--text-primary)', margin: '0.15rem 0' }}>
               {targetComputedTime.timeString}
             </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.35rem' }}>
-              <span>{targetComputedTime.dateStr}</span>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
               {renderBusinessBadge(targetComputedTime.businessStatus)}
+              <span style={{ color: 'var(--accent-blue)', fontWeight: 700, background: 'var(--bg-glass)', padding: '0.05rem 0.35rem', borderRadius: '4px' }}>
+                {targetComputedTime.tzBadge}
+              </span>
+              <span>{targetComputedTime.dateStr}</span>
             </div>
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--text-tertiary)', flexWrap: 'wrap', gap: '0.4rem' }}>
           <span>Difference: {formatOffsetLabel(getMinutesOffsetFromIST(baseDate, selectedTargetCity.timezone), baseDate, selectedTargetCity.timezone)}</span>
-          <span>{selectedTargetCity.timezone}</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.74rem' }}>{selectedTargetCity.timezone}</span>
         </div>
       </div>
 
@@ -255,49 +259,52 @@ export function TimeConverter({
             <span>
               {direction === 'IST_TO_TARGET' 
                 ? 'Enter / Adjust IST Time' 
-                : `Enter / Adjust ${selectedTargetCity.city} Time`}
+                : `Enter / Adjust ${selectedTargetCity.displayName} Time`}
             </span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-            {/* Date Picker */}
-            <input 
-              type="date" 
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
-              className="toggle-pill-btn"
-              style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-highlight)' }}
-              id="converter-date-picker"
-            />
-
+            <button className="quick-btn" onClick={handleSetNow} id="set-now-btn">
+              ⚡ Now
+            </button>
             <button 
-              className="toggle-pill-btn active"
+              className="quick-btn" 
               onClick={handleCopySchedule}
+              style={{ background: copied ? 'rgba(34, 197, 94, 0.2)' : undefined, color: copied ? 'var(--accent-emerald)' : undefined }}
               id="copy-schedule-btn"
             >
-              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? <Check size={12} /> : <Copy size={12} />}
               <span>{copied ? 'Copied' : 'Share'}</span>
             </button>
           </div>
         </div>
 
-        {/* Time Stepper & Digit Control */}
+        {/* Date Selector Row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <Calendar size={15} color="var(--text-secondary)" />
+          <input
+            type="date"
+            className="date-input-field"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            id="converter-date-picker"
+          />
+        </div>
+
+        {/* Full Feature Interactive Time Controller */}
         <TimePickerControl
           minutesOfDay={minutesOfDay}
           onChangeMinutes={setMinutesOfDay}
           is24Hour={is24Hour}
         />
 
-        {/* Quick Presets */}
-        <div className="quick-time-buttons" style={{ marginTop: '1rem' }}>
-          <button className="quick-btn" onClick={handleSetNow}>
-            ⚡ Right Now
-          </button>
+        {/* Quick Meeting & Shift Presets */}
+        <div className="quick-presets-row">
           <button className="quick-btn" onClick={() => handleSetPreset(9, 0)}>
-            🌅 9:00 AM (Work Start)
+            🌅 9:00 AM (IST Standup)
           </button>
-          <button className="quick-btn" onClick={() => handleSetPreset(13, 30)}>
-            ☀️ 1:30 PM (Lunch)
+          <button className="quick-btn" onClick={() => handleSetPreset(14, 30)}>
+            ☀️ 2:30 PM (EU Sync)
           </button>
           <button className="quick-btn" onClick={() => handleSetPreset(18, 0)}>
             🌆 6:00 PM (IST Wrap)
@@ -308,12 +315,12 @@ export function TimeConverter({
         </div>
       </div>
 
-      {/* Multi-City Synchronized Breakdown */}
+      {/* Multi-Country Synchronized Breakdown */}
       <div className="converted-list">
         <div className="section-header">
           <div className="section-title">
             <Clock size={18} color="#f97316" />
-            <span>All Global Hubs at {istComputedTime.timeString} IST</span>
+            <span>All Added Countries at {istComputedTime.timeString} IST</span>
           </div>
         </div>
 
@@ -330,16 +337,19 @@ export function TimeConverter({
               style={{ cursor: 'pointer' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{city.flag}</span>
+                <span style={{ fontSize: '1.6rem' }}>{city.flag}</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span>{city.city}</span>
+                  <div style={{ fontWeight: 700, fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>{city.displayName}</span>
                     {city.id === selectedTargetCity.id && (
                       <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', background: 'var(--accent-indigo)', borderRadius: 'var(--radius-full)', color: '#fff' }}>Target</span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
-                    {city.country} • {offsetLabel}
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <span>{city.continent} • {offsetLabel}</span>
+                    <span style={{ color: 'var(--accent-blue)', fontWeight: 700, background: 'var(--bg-glass)', padding: '0.05rem 0.35rem', borderRadius: '4px', fontSize: '0.72rem' }}>
+                      {conv.tzBadge}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -360,14 +370,14 @@ export function TimeConverter({
         })}
       </div>
 
-      {/* Global City Search Modal */}
+      {/* Global Country Search Modal */}
       <CitySelectModal
         isOpen={isCityModalOpen}
         onClose={() => setIsCityModalOpen(false)}
         selectedCityId={selectedTargetCity.id}
         onSelectCity={setSelectedTargetCity}
         currentTime={currentTime}
-        title="Search & Select Target City"
+        title="Search & Select Target Country"
       />
     </div>
   );
